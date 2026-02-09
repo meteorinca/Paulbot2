@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Quadruped Robot Controller</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg-primary: #0f0f1a;
+            --bg-secondary: #1a1a2e;
+            --bg-card: rgba(255, 255, 255, 0.05);
+            --accent: #00d4ff;
+            --accent-glow: rgba(0, 212, 255, 0.3);
+            --success: #00e676;
+            --warning: #ffab00;
+            --danger: #ff5252;
+            --text: #ffffff;
+            --text-dim: rgba(255, 255, 255, 0.6);
+            --purple: #a855f7;
+            --pink: #ec4899;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            min-height: 100vh;
+            color: var(--text);
+            padding: 15px;
+            line-height: 1.4;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 2em;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--accent), var(--purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: var(--text-dim);
+            font-size: 0.9em;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-header h2 {
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .card-header .icon {
+            font-size: 1.3em;
+        }
+
+        /* Connection Panel */
+        .connection-grid {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--text);
+            font-size: 15px;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--text-dim);
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #0099cc);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px var(--accent-glow);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #00b862);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 230, 118, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #c62828);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn-large {
+            padding: 16px 32px;
+            font-size: 16px;
+        }
+
+        /* Status Indicator */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--danger);
+            box-shadow: 0 0 10px var(--danger);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+            animation: pulse-success 1.5s infinite;
+        }
+
+        .status-dot.connecting {
+            background: var(--warning);
+            box-shadow: 0 0 10px var(--warning);
+            animation: pulse-warning 0.8s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        @keyframes pulse-success {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.8;
+                transform: scale(1.1);
+            }
+        }
+
+        @keyframes pulse-warning {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        .status-text {
+            flex: 1;
+            font-size: 14px;
+        }
+
+        .status-ip {
+            font-family: monospace;
+            color: var(--accent);
+        }
+
+        .status-details {
+            display: flex;
+            gap: 20px;
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+
+        .status-details .stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-details .stat .value {
+            color: var(--accent);
+            font-family: monospace;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        /* Command Grid */
+        .cmd-section {
+            margin-bottom: 20px;
+        }
+
+        .cmd-section h3 {
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cmd-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .cmd-grid.wide {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .cmd-btn {
+            padding: 14px 10px;
+            background: linear-gradient(145deg, #2a2a4a, #1a1a2e);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: var(--text);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: center;
+        }
+
+        .cmd-btn:hover {
+            background: linear-gradient(145deg, #3a3a5a, #2a2a4a);
+            border-color: var(--accent);
+        }
+
+        .cmd-btn:active {
+            transform: scale(0.95);
+            background: var(--accent);
+        }
+
+        .cmd-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .cmd-btn .emoji {
+            font-size: 20px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .cmd-btn.movement {
+            border-color: rgba(0, 212, 255, 0.3);
+        }
+
+        .cmd-btn.pose {
+            border-color: rgba(168, 85, 247, 0.3);
+        }
+
+        .cmd-btn.action {
+            border-color: rgba(0, 230, 118, 0.3);
+        }
+
+        .cmd-btn.expression {
+            border-color: rgba(255, 171, 0, 0.3);
+        }
+
+        .cmd-btn.gait {
+            border-color: rgba(236, 72, 153, 0.3);
+        }
+
+        .cmd-btn.system {
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .cmd-btn.danger {
+            background: linear-gradient(145deg, #4a2a2a, #2e1a1a);
+            border-color: rgba(255, 82, 82, 0.5);
+        }
+
+        .cmd-btn.danger:active {
+            background: var(--danger);
+        }
+
+        /* D-Pad */
+        .dpad-container {
+            display: flex;
+            justify-content: center;
+            padding: 10px 0;
+        }
+
+        .dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(3, 60px);
+            gap: 6px;
+        }
+
+        .dpad-btn {
+            background: linear-gradient(145deg, #2a2a4a, #1a1a2e);
+            border: 2px solid rgba(0, 212, 255, 0.3);
+            border-radius: 12px;
+            color: var(--text);
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.1s;
+        }
+
+        .dpad-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .dpad-btn:active:not(:disabled),
+        .dpad-btn.active {
+            background: var(--accent);
+            transform: scale(0.92);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .dpad-btn.stop {
+            background: linear-gradient(145deg, #4a2a2a, #2e1a1a);
+            border-color: rgba(255, 82, 82, 0.5);
+            font-size: 18px;
+        }
+
+        .dpad-btn.stop:active:not(:disabled) {
+            background: var(--danger);
+        }
+
+        /* Terminal */
+        .terminal {
+            background: #0a0a0f;
+            border-radius: 10px;
+            overflow: hidden;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .terminal-header {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .terminal-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .terminal-output {
+            height: 180px;
+            overflow-y: auto;
+            padding: 10px 15px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .terminal-line {
+            margin: 2px 0;
+        }
+
+        .terminal-line.cmd {
+            color: var(--accent);
+        }
+
+        .terminal-line.response {
+            color: var(--success);
+        }
+
+        .terminal-line.error {
+            color: var(--danger);
+        }
+
+        .terminal-line.info {
+            color: var(--text-dim);
+        }
+
+        .terminal-input {
+            display: flex;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .terminal-input span {
+            padding: 12px;
+            color: var(--accent);
+        }
+
+        .terminal-input input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 13px;
+            padding: 12px 12px 12px 0;
+        }
+
+        .terminal-input input:focus {
+            outline: none;
+        }
+
+        .terminal-input button {
+            padding: 0 15px;
+            background: var(--accent);
+            border: none;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .terminal-input button:hover {
+            background: #00b8d9;
+        }
+
+        .terminal-input button:disabled {
+            background: #333;
+            cursor: not-allowed;
+        }
+
+        /* Servo Control */
+        .servo-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .servo-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .servo-control label {
+            width: 30px;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .servo-control input[type="range"] {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .servo-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .servo-control .value {
+            width: 35px;
+            text-align: right;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        /* Heartbeat indicator */
+        .heartbeat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-size: 12px;
+        }
+
+        .heartbeat-icon {
+            font-size: 16px;
+            animation: heartbeat 1s infinite;
+        }
+
+        .heartbeat-icon.inactive {
+            animation: none;
+            opacity: 0.3;
+        }
+
+        @keyframes heartbeat {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 500px) {
+            .connection-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .connection-grid .btn {
+                justify-content: center;
+            }
+
+            .cmd-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .cmd-grid.wide {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .servo-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .status-details {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+        }
+
+        /* Accordion */
+        .accordion-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            padding: 5px 0;
+        }
+
+        .accordion-header::after {
+            content: '▼';
+            font-size: 10px;
+            transition: transform 0.2s;
+        }
+
+        .accordion-header.collapsed::after {
+            transform: rotate(-90deg);
+        }
+
+        .accordion-content {
+            overflow: hidden;
+            transition: max-height 0.3s;
+        }
+
+        .accordion-content.collapsed {
+            max-height: 0 !important;
+        }
+
+        /* Toast notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            padding: 12px 20px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            animation: slideIn 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--danger);
+        }
+
+        .toast.info {
+            border-left: 4px solid var(--accent);
+        }
+
+        .toast.warning {
+            border-left: 4px solid var(--warning);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Connection modal overlay */
+        .connection-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .connection-overlay.active {
+            display: flex;
+        }
+
+        .connection-modal {
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            max-width: 400px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .connection-modal h2 {
+            margin-bottom: 15px;
+            color: var(--accent);
+        }
+
+        .connection-modal p {
+            color: var(--text-dim);
+            margin-bottom: 20px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="connection-overlay" id="connectionOverlay">
+        <div class="connection-modal">
+            <div class="spinner"></div>
+            <h2>Connecting...</h2>
+            <p id="connectionMessage">Establishing connection to robot</p>
+            <button class="btn btn-secondary" onclick="cancelConnection()">Cancel</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>🤖 Quadruped Controller</h1>
+            <p class="subtitle">ESP32-S3 Robot Control Interface</p>
+        </header>
+
+        <!-- Connection Card -->
+        <div class="card">
+            <div class="card-header">
+                <span class="icon">📡</span>
+                <h2>Connection</h2>
+            </div>
+
+            <div class="connection-grid">
+                <input type="text" id="robotIp" placeholder="Robot IP Address (e.g. 192.168.1.100)">
+                <button class="btn btn-success btn-large" id="connectBtn" onclick="toggleConnection()">
+                    <span>🔌</span>
+                    <span id="connectBtnText">Connect</span>
+                </button>
+                <button class="btn btn-secondary" onclick="testConnection()">
+                    <span>🔍</span>
+                    <span>Test</span>
+                </button>
+            </div>
+
+            <div class="status-bar">
+                <div class="status-dot" id="statusDot"></div>
+                <div class="status-text">
+                    <span id="statusText">Not Connected</span>
+                    <span class="status-ip" id="statusIp"></span>
+                </div>
+                <div class="heartbeat" id="heartbeatContainer">
+                    <span class="heartbeat-icon inactive" id="heartbeatIcon">💓</span>
+                    <span id="latency">---</span>
+                </div>
+            </div>
+
+            <div class="status-details" style="margin-top: 10px;">
+                <div class="stat">
+                    <span>📤 Sent:</span>
+                    <span class="value" id="cmdsSent">0</span>
+                </div>
+                <div class="stat">
+                    <span>✅ OK:</span>
+                    <span class="value" id="cmdsOk">0</span>
+                </div>
+                <div class="stat">
+                    <span>❌ Failed:</span>
+                    <span class="value" id="cmdsFailed">0</span>
+                </div>
+                <div class="stat">
+                    <span>⏱️ Avg:</span>
+                    <span class="value" id="avgLatency">---</span>
+                </div>
+            </div>
+
+            <!-- Quick Actions after connection -->
+            <div class="quick-actions" id="quickActions" style="display: none;">
+                <button class="btn btn-primary" onclick="send('stand')">🧍 Stand Up</button>
+                <button class="btn btn-secondary" onclick="send('help')">❓ Help</button>
+                <button class="btn btn-secondary" onclick="send('status')">📊 Status</button>
+                <button class="btn btn-danger" onclick="send('stop')">🛑 Emergency Stop</button>
+            </div>
+        </div>
+
+        <!-- Movement Card -->
+        <div class="card" id="movementCard">
+            <div class="card-header">
+                <span class="icon">🎮</span>
+                <h2>Movement</h2>
+            </div>
+
+            <div class="dpad-container">
+                <div class="dpad">
+                    <div></div>
+                    <button class="dpad-btn" data-cmd="fwd" data-hold="true" disabled>▲</button>
+                    <div></div>
+                    <button class="dpad-btn" data-cmd="left" data-hold="true" disabled>◀</button>
+                    <button class="dpad-btn stop" data-cmd="stop" disabled>STOP</button>
+                    <button class="dpad-btn" data-cmd="right" data-hold="true" disabled>▶</button>
+                    <div></div>
+                    <button class="dpad-btn" data-cmd="back" data-hold="true" disabled>▼</button>
+                    <div></div>
+                </div>
+            </div>
+
+            <p style="text-align:center; font-size:12px; color:var(--text-dim); margin-top:10px;">
+                Keyboard: WASD or Arrow Keys | Space = Stop
+            </p>
+        </div>
+
+        <!-- Commands Card -->
+        <div class="card" id="commandsCard">
+            <div class="card-header">
+                <span class="icon">⚡</span>
+                <h2>Quick Commands</h2>
+            </div>
+
+            <!-- Poses -->
+            <div class="cmd-section">
+                <h3><span>🧘</span> Poses</h3>
+                <div class="cmd-grid">
+                    <button class="cmd-btn pose" onclick="send('stand')" disabled>
+                        <span class="emoji">🧍</span>Stand
+                    </button>
+                    <button class="cmd-btn pose" onclick="send('sit')" disabled>
+                        <span class="emoji">🪑</span>Sit
+                    </button>
+                    <button class="cmd-btn pose" onclick="send('crouch')" disabled>
+                        <span class="emoji">⬇️</span>Crouch
+                    </button>
+                    <button class="cmd-btn pose" onclick="send('center')" disabled>
+                        <span class="emoji">⚖️</span>Center
+                    </button>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="cmd-section">
+                <h3><span>🎭</span> Actions</h3>
+                <div class="cmd-grid">
+                    <button class="cmd-btn action" onclick="send('wave')" disabled>
+                        <span class="emoji">👋</span>Wave
+                    </button>
+                    <button class="cmd-btn action" onclick="send('bow')" disabled>
+                        <span class="emoji">🙇</span>Bow
+                    </button>
+                    <button class="cmd-btn action" onclick="send('shake')" disabled>
+                        <span class="emoji">💃</span>Shake
+                    </button>
+                    <button class="cmd-btn action" onclick="send('wiggle')" disabled>
+                        <span class="emoji">🐕</span>Wiggle
+                    </button>
+                    <button class="cmd-btn action" onclick="send('spin')" disabled>
+                        <span class="emoji">🔄</span>Spin
+                    </button>
+                    <button class="cmd-btn action" onclick="send('stretch')" disabled>
+                        <span class="emoji">🧘</span>Stretch
+                    </button>
+                    <button class="cmd-btn action" onclick="send('pushup')" disabled>
+                        <span class="emoji">💪</span>Pushup
+                    </button>
+                    <button class="cmd-btn action" onclick="send('dance')" disabled>
+                        <span class="emoji">🕺</span>Dance
+                    </button>
+                </div>
+            </div>
+
+            <!-- Gaits -->
+            <div class="cmd-section">
+                <h3><span>🚶</span> Gaits</h3>
+                <div class="cmd-grid">
+                    <button class="cmd-btn gait" onclick="send('gait walk')" disabled>
+                        <span class="emoji">🚶</span>Walk
+                    </button>
+                    <button class="cmd-btn gait" onclick="send('gait trot')" disabled>
+                        <span class="emoji">🏃</span>Trot
+                    </button>
+                    <button class="cmd-btn gait" onclick="send('gait creep')" disabled>
+                        <span class="emoji">🐢</span>Creep
+                    </button>
+                    <button class="cmd-btn gait" onclick="send('gait demo')" disabled>
+                        <span class="emoji">🎬</span>Demo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Expressions -->
+            <div class="cmd-section">
+                <h3><span>👀</span> Eye Expressions</h3>
+                <div class="cmd-grid" style="grid-template-columns: repeat(5, 1fr);">
+                    <button class="cmd-btn expression" onclick="send('happy')" disabled>
+                        <span class="emoji">😊</span>Happy
+                    </button>
+                    <button class="cmd-btn expression" onclick="send('sad')" disabled>
+                        <span class="emoji">😢</span>Sad
+                    </button>
+                    <button class="cmd-btn expression" onclick="send('angry')" disabled>
+                        <span class="emoji">😠</span>Angry
+                    </button>
+                    <button class="cmd-btn expression" onclick="send('sleep')" disabled>
+                        <span class="emoji">😴</span>Sleep
+                    </button>
+                    <button class="cmd-btn expression" onclick="send('wake')" disabled>
+                        <span class="emoji">😲</span>Wake
+                    </button>
+                    <button class="cmd-btn expression" onclick="send('blink')" disabled>
+                        <span class="emoji">😉</span>Blink
+                    </button>
+                    <button class="cmd-btn expression" onclick="send('wink')" disabled>
+                        <span class="emoji">😜</span>Wink
+                    </button>
+                    <button class="cmd-btn expression" onclick="send('look_left')" disabled>
+                        <span class="emoji">👈</span>Look L
+                    </button>
+                    <button class="cmd-btn expression" onclick="send('look_right')" disabled>
+                        <span class="emoji">👉</span>Look R
+                    </button>
+                    <button class="cmd-btn expression" onclick="send('idle')" disabled>
+                        <span class="emoji">😐</span>Idle
+                    </button>
+                </div>
+            </div>
+
+            <!-- System Commands -->
+            <div class="cmd-section">
+                <h3><span>⚙️</span> System</h3>
+                <div class="cmd-grid wide">
+                    <button class="cmd-btn system" onclick="send('help')" disabled>
+                        <span class="emoji">❓</span>Help
+                    </button>
+                    <button class="cmd-btn system" onclick="send('status')" disabled>
+                        <span class="emoji">📊</span>Status
+                    </button>
+                    <button class="cmd-btn system" onclick="send('anims')" disabled>
+                        <span class="emoji">🎬</span>List Anims
+                    </button>
+                    <button class="cmd-btn system" onclick="send('calibrate')" disabled>
+                        <span class="emoji">🔧</span>Calibrate
+                    </button>
+                    <button class="cmd-btn system" onclick="send('reset')" disabled>
+                        <span class="emoji">🔄</span>Reset
+                    </button>
+                    <button class="cmd-btn danger" onclick="send('stop')" disabled>
+                        <span class="emoji">🛑</span>STOP
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Terminal Card -->
+        <div class="card">
+            <div class="card-header">
+                <span class="icon">💻</span>
+                <h2>Command Terminal</h2>
+            </div>
+
+            <div class="terminal">
+                <div class="terminal-header">
+                    <div class="terminal-dot" style="background:#ff5f56;"></div>
+                    <div class="terminal-dot" style="background:#ffbd2e;"></div>
+                    <div class="terminal-dot" style="background:#27c93f;"></div>
+                    <span style="margin-left:10px; font-size:12px; opacity:0.5;">robot@quadruped</span>
+                    <button
+                        style="margin-left:auto; background:transparent; border:1px solid rgba(255,255,255,0.2); color:var(--text-dim); padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer;"
+                        onclick="clearTerminal()">Clear</button>
+                </div>
+                <div class="terminal-output" id="terminalOutput">
+                    <div class="terminal-line info">Welcome to Quadruped Robot Terminal</div>
+                    <div class="terminal-line info">Enter a robot IP and click Connect to begin</div>
+                    <div class="terminal-line info">Type 'help' for available commands</div>
+                </div>
+                <div class="terminal-input">
+                    <span>$</span>
+                    <input type="text" id="cmdInput" placeholder="Enter command..." disabled
+                        onkeydown="handleCmdKeydown(event)">
+                    <button onclick="sendCmd()" id="sendCmdBtn" disabled>Send</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Servo Control Card (Collapsible) -->
+        <div class="card">
+            <div class="card-header accordion-header" onclick="toggleAccordion(this)">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span class="icon">🔧</span>
+                    <h2>Direct Servo Control</h2>
+                </div>
+            </div>
+
+            <div class="accordion-content" style="max-height: 300px;">
+                <div class="servo-grid">
+                    <div class="servo-control">
+                        <label>R1</label>
+                        <input type="range" min="0" max="180" value="90" oninput="updateServo('R1', this.value)"
+                            disabled>
+                        <span class="value">90°</span>
+                    </div>
+                    <div class="servo-control">
+                        <label>L1</label>
+                        <input type="range" min="0" max="180" value="90" oninput="updateServo('L1', this.value)"
+                            disabled>
+                        <span class="value">90°</span>
+                    </div>
+                    <div class="servo-control">
+                        <label>R2</label>
+                        <input type="range" min="0" max="180" value="90" oninput="updateServo('R2', this.value)"
+                            disabled>
+                        <span class="value">90°</span>
+                    </div>
+                    <div class="servo-control">
+                        <label>L2</label>
+                        <input type="range" min="0" max="180" value="90" oninput="updateServo('L2', this.value)"
+                            disabled>
+                        <span class="value">90°</span>
+                    </div>
+                    <div class="servo-control">
+                        <label>R3</label>
+                        <input type="range" min="0" max="180" value="90" oninput="updateServo('R3', this.value)"
+                            disabled>
+                        <span class="value">90°</span>
+                    </div>
+                    <div class="servo-control">
+                        <label>L3</label>
+                        <input type="range" min="0" max="180" value="90" oninput="updateServo('L3', this.value)"
+                            disabled>
+                        <span class="value">90°</span>
+                    </div>
+                    <div class="servo-control">
+                        <label>R4</label>
+                        <input type="range" min="0" max="180" value="90" oninput="updateServo('R4', this.value)"
+                            disabled>
+                        <span class="value">90°</span>
+                    </div>
+                    <div class="servo-control">
+                        <label>L4</label>
+                        <input type="range" min="0" max="180" value="90" oninput="updateServo('L4', this.value)"
+                            disabled>
+                        <span class="value">90°</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer style="text-align: center; padding: 20px; color: var(--text-dim); font-size: 12px;">
+            <p>🤖 Quadruped Robot Controller v2.0</p>
+            <p style="margin-top: 5px;">Make sure <code
+                    style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">udp_proxy.py</code> is
+                running</p>
+        </footer>
+    </div>
+
+    <script>
+        // ===== State =====
+        let robotIp = '';
+        let isConnected = false;
+        let isConnecting = false;
+        let proxyUrl = 'http://localhost:8080';
+        let commandHistory = [];
+        let historyIndex = -1;
+        let heartbeatInterval = null;
+        let stats = {
+            sent: 0,
+            ok: 0,
+            failed: 0,
+            latencies: []
+        };
+
+        // ===== Toast Notifications =====
+        function showToast(message, type = 'info', duration = 3000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+            toast.innerHTML = `<span>${icons[type]}</span><span>${message}</span>`;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        // ===== Connection =====
+        function toggleConnection() {
+            if (isConnected) {
+                disconnect();
+            } else {
+                connect();
+            }
+        }
+
+        function cancelConnection() {
+            isConnecting = false;
+            document.getElementById('connectionOverlay').classList.remove('active');
+            setStatus('disconnected', 'Connection cancelled');
+        }
+
+        async function connect() {
+            robotIp = document.getElementById('robotIp').value.trim();
+            if (!robotIp) {
+                showToast('Please enter robot IP address', 'error');
+                termLog('Please enter robot IP address', 'error');
+                return;
+            }
+
+            isConnecting = true;
+            document.getElementById('connectionOverlay').classList.add('active');
+            document.getElementById('connectionMessage').textContent = `Connecting to ${robotIp}...`;
+
+            setStatus('connecting', 'Connecting...');
+            termLog(`Connecting to ${robotIp}...`, 'info');
+
+            try {
+                const result = await sendRaw('ping');
+
+                if (result && result.connected) {
+                    isConnected = true;
+                    isConnecting = false;
+                    document.getElementById('connectionOverlay').classList.remove('active');
+
+                    setStatus('connected', 'Connected');
+                    document.getElementById('statusIp').textContent = robotIp;
+                    document.getElementById('connectBtn').classList.remove('btn-success');
+                    document.getElementById('connectBtn').classList.add('btn-danger');
+                    document.getElementById('connectBtnText').textContent = 'Disconnect';
+
+                    enableControls(true);
+                    startHeartbeat();
+
+                    localStorage.setItem('robotIp', robotIp);
+                    termLog('Connected successfully!', 'response');
+                    showToast('Connected to robot!', 'success');
+
+                    document.getElementById('quickActions').style.display = 'flex';
+                } else {
+                    throw new Error(result?.response || 'No response');
+                }
+            } catch (e) {
+                isConnecting = false;
+                document.getElementById('connectionOverlay').classList.remove('active');
+                setStatus('disconnected', 'Connection Failed');
+                termLog(`Failed to connect: ${e.message}`, 'error');
+                showToast('Failed to connect. Check IP and proxy.', 'error');
+            }
+        }
+
+        function disconnect() {
+            isConnected = false;
+            stopHeartbeat();
+
+            setStatus('disconnected', 'Disconnected');
+            document.getElementById('statusIp').textContent = '';
+            document.getElementById('connectBtn').classList.remove('btn-danger');
+            document.getElementById('connectBtn').classList.add('btn-success');
+            document.getElementById('connectBtnText').textContent = 'Connect';
+            document.getElementById('latency').textContent = '---';
+            document.getElementById('heartbeatIcon').classList.add('inactive');
+            document.getElementById('quickActions').style.display = 'none';
+
+            enableControls(false);
+
+            termLog('Disconnected', 'info');
+            showToast('Disconnected from robot', 'info');
+        }
+
+        async function testConnection() {
+            robotIp = document.getElementById('robotIp').value.trim();
+            if (!robotIp) {
+                showToast('Enter IP address first', 'error');
+                termLog('Enter IP address first', 'error');
+                return;
+            }
+
+            termLog(`Testing connection to ${robotIp}...`, 'info');
+
+            try {
+                const response = await fetch(`${proxyUrl}/ping?ip=${robotIp}`, { mode: 'cors' });
+                const result = await response.json();
+
+                if (result.reachable) {
+                    termLog(`✅ Connection OK (${result.latency_ms}ms)`, 'response');
+                    showToast(`Robot reachable! Latency: ${result.latency_ms}ms`, 'success');
+                    document.getElementById('latency').textContent = `${result.latency_ms}ms`;
+                } else {
+                    termLog(`❌ Connection failed: ${result.response}`, 'error');
+                    showToast('Robot not reachable', 'error');
+                }
+            } catch (e) {
+                termLog(`Network error: ${e.message}`, 'error');
+                termLog('Make sure udp_proxy.py is running!', 'info');
+                showToast('Proxy not running!', 'error');
+            }
+        }
+
+        function setStatus(state, text) {
+            const dot = document.getElementById('statusDot');
+            const textEl = document.getElementById('statusText');
+
+            dot.className = 'status-dot ' + state;
+            textEl.textContent = text;
+        }
+
+        function enableControls(enabled) {
+            // Enable/disable all command buttons
+            document.querySelectorAll('.cmd-btn, .dpad-btn').forEach(btn => {
+                btn.disabled = !enabled;
+            });
+
+            // Terminal input
+            document.getElementById('cmdInput').disabled = !enabled;
+            document.getElementById('sendCmdBtn').disabled = !enabled;
+
+            // Servo sliders
+            document.querySelectorAll('.servo-control input[type="range"]').forEach(slider => {
+                slider.disabled = !enabled;
+            });
+        }
+
+        // ===== Heartbeat =====
+        function startHeartbeat() {
+            stopHeartbeat();
+
+            const icon = document.getElementById('heartbeatIcon');
+            icon.classList.remove('inactive');
+
+            heartbeatInterval = setInterval(async () => {
+                if (!isConnected) return;
+
+                try {
+                    const response = await fetch(`${proxyUrl}/ping?ip=${robotIp}`, { mode: 'cors' });
+                    const result = await response.json();
+
+                    if (result.reachable) {
+                        document.getElementById('latency').textContent = `${result.latency_ms}ms`;
+                        updateStats(result.latency_ms, true);
+                    } else {
+                        console.warn('Heartbeat failed:', result.response);
+                    }
+                } catch (e) {
+                    console.warn('Heartbeat error:', e);
+                }
+            }, 3000);
+        }
+
+        function stopHeartbeat() {
+            if (heartbeatInterval) {
+                clearInterval(heartbeatInterval);
+                heartbeatInterval = null;
+            }
+        }
+
+        function updateStats(latency, success) {
+            if (success) {
+                stats.latencies.push(latency);
+                if (stats.latencies.length > 20) stats.latencies.shift();
+
+                const avg = Math.round(stats.latencies.reduce((a, b) => a + b, 0) / stats.latencies.length);
+                document.getElementById('avgLatency').textContent = `${avg}ms`;
+            }
+
+            document.getElementById('cmdsSent').textContent = stats.sent;
+            document.getElementById('cmdsOk').textContent = stats.ok;
+            document.getElementById('cmdsFailed').textContent = stats.failed;
+        }
+
+        // ===== Commands =====
+        async function sendRaw(cmd) {
+            try {
+                const url = `${proxyUrl}/send?ip=${robotIp}&cmd=${encodeURIComponent(cmd)}`;
+                const response = await fetch(url, { mode: 'cors' });
+
+                if (response.ok) {
+                    return await response.json();
+                }
+            } catch (e) {
+                return null;
+            }
+        }
+
+        async function send(cmd, silent = false) {
+            if (!robotIp && !silent) {
+                termLog('Not connected', 'error');
+                return null;
+            }
+
+            if (!isConnected && !silent) {
+                showToast('Connect to robot first', 'warning');
+                return null;
+            }
+
+            stats.sent++;
+
+            if (!silent) {
+                termLog(`> ${cmd.toUpperCase()}`, 'cmd');
+            }
+
+            try {
+                const result = await sendRaw(cmd);
+
+                if (result) {
+                    stats.ok++;
+                    if (!silent) {
+                        const responseText = result.response;
+                        termLog(`< ${responseText}`, responseText.includes('OK') || responseText.includes('PONG') ? 'response' : 'info');
+                    }
+                    updateStats(result.latency_ms, true);
+                    return result.response;
+                } else {
+                    stats.failed++;
+                    if (!silent) {
+                        termLog('No response', 'error');
+                    }
+                    updateStats(0, false);
+                    return null;
+                }
+            } catch (e) {
+                stats.failed++;
+                if (!silent) {
+                    termLog(`Network error: ${e.message}`, 'error');
+                    termLog('Make sure udp_proxy.py is running!', 'info');
+                }
+                updateStats(0, false);
+                return null;
+            }
+        }
+
+        function sendCmd() {
+            const input = document.getElementById('cmdInput');
+            const cmd = input.value.trim();
+
+            if (!cmd) return;
+
+            commandHistory.unshift(cmd);
+            historyIndex = -1;
+
+            send(cmd);
+            input.value = '';
+        }
+
+        function handleCmdKeydown(e) {
+            if (e.key === 'Enter') {
+                sendCmd();
+            } else if (e.key === 'ArrowUp' && commandHistory.length > 0) {
+                historyIndex = Math.min(historyIndex + 1, commandHistory.length - 1);
+                e.target.value = commandHistory[historyIndex];
+                e.preventDefault();
+            } else if (e.key === 'ArrowDown') {
+                historyIndex = Math.max(historyIndex - 1, -1);
+                e.target.value = historyIndex >= 0 ? commandHistory[historyIndex] : '';
+                e.preventDefault();
+            }
+        }
+
+        // ===== Terminal =====
+        function termLog(message, type = '') {
+            const output = document.getElementById('terminalOutput');
+            const line = document.createElement('div');
+            line.className = 'terminal-line ' + type;
+
+            const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
+            line.textContent = `[${timestamp}] ${message}`;
+
+            output.appendChild(line);
+            output.scrollTop = output.scrollHeight;
+
+            // Keep last 100 lines
+            while (output.children.length > 100) {
+                output.removeChild(output.firstChild);
+            }
+        }
+
+        function clearTerminal() {
+            const output = document.getElementById('terminalOutput');
+            output.innerHTML = '<div class="terminal-line info">Terminal cleared</div>';
+        }
+
+        // ===== Servo Control =====
+        let servoTimeout = null;
+        function updateServo(name, value) {
+            const control = event.target.closest('.servo-control');
+            control.querySelector('.value').textContent = value + '°';
+
+            // Debounce to avoid flooding
+            clearTimeout(servoTimeout);
+            servoTimeout = setTimeout(() => {
+                send(`servo ${name} ${value}`);
+            }, 50);
+        }
+
+        // ===== D-Pad =====
+        document.querySelectorAll('.dpad-btn').forEach(btn => {
+            const cmd = btn.dataset.cmd;
+            const isHold = btn.dataset.hold === 'true';
+
+            function start(e) {
+                if (btn.disabled) return;
+                e.preventDefault();
+                btn.classList.add('active');
+                send(cmd);
+            }
+
+            function end(e) {
+                if (btn.disabled) return;
+                e.preventDefault();
+                btn.classList.remove('active');
+                if (isHold) {
+                    send('stop');
+                }
+            }
+
+            btn.addEventListener('mousedown', start);
+            btn.addEventListener('mouseup', end);
+            btn.addEventListener('mouseleave', end);
+            btn.addEventListener('touchstart', start);
+            btn.addEventListener('touchend', end);
+        });
+
+        // ===== Keyboard =====
+        const keyMap = {
+            'ArrowUp': 'fwd', 'w': 'fwd', 'W': 'fwd',
+            'ArrowDown': 'back', 's': 'back', 'S': 'back',
+            'ArrowLeft': 'left', 'a': 'left', 'A': 'left',
+            'ArrowRight': 'right', 'd': 'right', 'D': 'right',
+            ' ': 'stop'
+        };
+
+        let keysPressed = new Set();
+
+        document.addEventListener('keydown', (e) => {
+            // Ignore if typing in input
+            if (e.target.tagName === 'INPUT') return;
+            if (!isConnected) return;
+
+            if (keyMap[e.key] && !keysPressed.has(e.key)) {
+                keysPressed.add(e.key);
+                send(keyMap[e.key]);
+
+                // Highlight corresponding D-pad button
+                const btn = document.querySelector(`.dpad-btn[data-cmd="${keyMap[e.key]}"]`);
+                if (btn) btn.classList.add('active');
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+            if (!isConnected) return;
+
+            if (keysPressed.has(e.key)) {
+                keysPressed.delete(e.key);
+
+                // Remove highlight
+                const btn = document.querySelector(`.dpad-btn[data-cmd="${keyMap[e.key]}"]`);
+                if (btn) btn.classList.remove('active');
+
+                if (e.key !== ' ' && keysPressed.size === 0) {
+                    send('stop');
+                }
+            }
+        });
+
+        // ===== Accordion =====
+        function toggleAccordion(header) {
+            header.classList.toggle('collapsed');
+            header.nextElementSibling.classList.toggle('collapsed');
+        }
+
+        // ===== Check Proxy Status =====
+        async function checkProxy() {
+            try {
+                const response = await fetch(`${proxyUrl}/status`, { mode: 'cors' });
+                if (response.ok) {
+                    termLog('UDP Proxy is running', 'info');
+                    return true;
+                }
+            } catch (e) {
+                termLog('⚠️ UDP Proxy not detected! Run udp_proxy.py first.', 'error');
+                showToast('Proxy not running! Start udp_proxy.py', 'warning', 5000);
+                return false;
+            }
+        }
+
+        // ===== Init =====
+        const savedIp = localStorage.getItem('robotIp');
+        if (savedIp) {
+            document.getElementById('robotIp').value = savedIp;
+        }
+
+        // Check proxy on load
+        setTimeout(checkProxy, 500);
+    </script>
+</body>
+
+</html>
